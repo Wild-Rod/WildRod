@@ -3,6 +3,7 @@ Website: https://wild-rod.github.io/WildRod/ <br> <br>
 Visit for lots of fun! (Not yet but hopefully 
 
 
+
 import json
 import os
 import tkinter as tk
@@ -12,35 +13,51 @@ from tkinter import filedialog, messagebox
 k = 4.0  # mirror across y = k
 # ====================
 
-def mirror_rotation(deg):
-    return (-deg) % 360
+def mirror_y(y):
+    return 2 * k - y
+
+def safe_mirror_rotation(obj, key):
+    if key in obj and obj[key] is not None:
+        try:
+            obj[key] = (-obj[key]) % 360
+        except:
+            pass
 
 def mirror_point(point):
-    # Position
-    if "anchor" in point:
-        point["anchor"]["y"] = 2*k - point["anchor"]["y"]
-    if "prevControl" in point and point["prevControl"] is not None:
-        point["prevControl"]["y"] = 2*k - point["prevControl"]["y"]
-    if "nextControl" in point and point["nextControl"] is not None:
-        point["nextControl"]["y"] = 2*k - point["nextControl"]["y"]
+    # Anchor position
+    if "anchor" in point and point["anchor"] is not None:
+        if "y" in point["anchor"]:
+            point["anchor"]["y"] = mirror_y(point["anchor"]["y"])
 
-    # Rotation
-    if "holonomicRotation" in point:
-        point["holonomicRotation"] = mirror_rotation(point["holonomicRotation"])
+    # Control points
+    if "prevControl" in point and point["prevControl"] is not None:
+        if "y" in point["prevControl"]:
+            point["prevControl"]["y"] = mirror_y(point["prevControl"]["y"])
+
+    if "nextControl" in point and point["nextControl"] is not None:
+        if "y" in point["nextControl"]:
+            point["nextControl"]["y"] = mirror_y(point["nextControl"]["y"])
+
+    # Rotation fields (handle all known variants)
+    safe_mirror_rotation(point, "holonomicRotation")
+    safe_mirror_rotation(point, "rotation")
 
 def mirror_file(input_path):
     with open(input_path, "r") as f:
         data = json.load(f)
 
     # Waypoints
-    if "waypoints" in data:
+    if "waypoints" in data and isinstance(data["waypoints"], list):
         for point in data["waypoints"]:
             mirror_point(point)
 
     # Rotation targets
-    if "rotationTargets" in data:
+    if "rotationTargets" in data and isinstance(data["rotationTargets"], list):
         for rot in data["rotationTargets"]:
-            rot["rotation"] = mirror_rotation(rot["rotation"])
+            safe_mirror_rotation(rot, "rotation")
+
+    # (Optional) future-proof: handle other objects with positions
+    # You can expand this if needed
 
     # Output file
     base, ext = os.path.splitext(input_path)
@@ -53,7 +70,7 @@ def mirror_file(input_path):
 
 # ===== GUI =====
 root = tk.Tk()
-root.withdraw()  # hide main window
+root.withdraw()
 
 file_path = filedialog.askopenfilename(
     title="Select a PathPlanner .path file",
@@ -68,5 +85,3 @@ if file_path:
         messagebox.showerror("Error", str(e))
 else:
     messagebox.showinfo("Cancelled", "No file selected.")
-
-
