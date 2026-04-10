@@ -1,11 +1,12 @@
 Quick Website <br> <br>
 Website: https://wild-rod.github.io/WildRod/ <br> <br>
-Visit for lots of fun! (Not yet but hopefully soon!)
+Visit for lots of fun! (Not yet but hopefully 
 
 
 import json
-import sys
 import os
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
 # ====== CONFIG ======
 k = 4.0  # mirror across y = k
@@ -41,18 +42,31 @@ def mirror_file(input_path):
         for rot in data["rotationTargets"]:
             rot["rotation"] = mirror_rotation(rot["rotation"])
 
-    # Output filename
+    # Output file
     base, ext = os.path.splitext(input_path)
     output_path = base + "_mirrored" + ext
 
     with open(output_path, "w") as f:
         json.dump(data, f, indent=2)
 
-    print(f"Saved: {output_path}")
+    return output_path
 
-# Handle drag & drop
-if len(sys.argv) < 2:
-    print("Drag a .path file onto this script!")
+# ===== GUI =====
+root = tk.Tk()
+root.withdraw()  # hide main window
+
+file_path = filedialog.askopenfilename(
+    title="Select a PathPlanner .path file",
+    filetypes=[("PathPlanner files", "*.path")]
+)
+
+if file_path:
+    try:
+        output = mirror_file(file_path)
+        messagebox.showinfo("Success", f"Mirrored file saved as:\n{output}")
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
 else:
-    for path in sys.argv[1:]:
-        mirror_file(path)
+    messagebox.showinfo("Cancelled", "No file selected.")
+
+
